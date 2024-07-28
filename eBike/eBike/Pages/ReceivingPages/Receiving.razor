@@ -1,0 +1,225 @@
+﻿@page "/ReceivingPages/Receiving"
+<PageTitle>Receiving</PageTitle>
+
+<div class="card">
+    <h2 class="text-center">Outstanding Orders</h2>
+    @if (SuccessModel == true)
+    {
+        <div class="alert alert-success" role="alert">
+            Operation successfull
+            @if (SucessOrderID != null)
+            {
+                <p>Received Order Number: @SucessOrderID</p>
+            }
+        </div>
+        <button type="button" class="btn btn-secondary" @onclick=@( () => SuccessModel = null )>
+            <strong>Dismiss</strong>
+        </button>
+    }
+    @if (SuccessModel == false && ErrorList != null && ErrorList.Count > 0)
+    {
+        <div class="alert alert-danger" role="alert">
+            <ul>
+                @foreach (var error in ErrorList)
+                {
+                    <li>@error.Message</li>
+                }
+            </ul>
+        </div>
+        <button type="button" class="btn btn-secondary" @onclick=@( () => SuccessModel = null  )>
+            <strong>Dismiss</strong>
+        </button>
+    }
+    @if (OutstandingOrdersModel != null)
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th scope="col">Order Number</th>
+                    <th scope="col">Order Date</th>
+                    <th scope="col">Vendor</th>
+                    <th scope="col">Contact</th>
+                    <th scope="col">View Order</th>
+                </tr>
+            </thead>
+            <tbody>
+                    @foreach (var order in OutstandingOrdersModel)
+                    {
+                        <tr>
+                            <th scope="row">@order.PurchaseOrderId</th>
+                            <td>@order.OrderDate</td>
+                            <td>@order.VendorName</td>
+                            <td>@order.Phone</td>
+                            <td>
+                                <button type="button" class="btn btn-primary" @onclick=@(() => ViewOrder(@order.PurchaseOrderId))>
+                                    View
+                                </button>
+                            </td>
+                        </tr>
+                    }
+            </tbody>
+        </table>
+    }
+    @if (ReceiveOrderModel != null)
+    {
+        <div class='container'>
+            <div class='row justify-content-between'>
+                <h2>Receive Order</h2>
+                <hr>
+                <div class="card col-3">
+                    <h4 class="card-title">Order Number:</h4>
+                    <p class="card-body">@ReceiveOrderModel.PurchaseOrderId</p>
+                </div>
+                <div class="card col-3">
+                    <h4 class="card-title">Vendor:</h4>
+                    <p class="card-body">@ReceiveOrderModel.VendorName</p>
+                </div>
+                <div class="card col-3">
+                    <h4 class="card-title">Contact:</h4>
+                    <p class="card-body">@ReceiveOrderModel.VendorPhone</p>
+                </div>
+                
+            </div>
+        </div>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th scope="col">Part ID</th>
+                    <th scope="col">Description</th>
+                    <th scope="col">Ordered Qty</th>
+                    <th scope="col">Outstanding Qty</th>
+                    <th scope="col">Received Qty</th>
+                    <th scope="col">Returned Quantity</th>
+                    <th scope="col">Return Reason</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (ReceiveOrderModel.ItemDetails == null)
+                {
+                    <tr>
+                        <td colspan="7">No Items</td>
+                    </tr>
+                } else
+                {
+                    @* @for (int i = 0; i < ReceiveOrderModel.ItemDetails.Count; i++) *@
+                    @foreach (var item in ReceiveOrderModel.ItemDetails)
+                    {
+                        @* item.OutstandingQuantity = item.Quantity - (item.ReceivedQuantity ?? 0); *@
+                       
+                        <tr>
+                            <th scope="row">@item.PartID</th>
+                            <td>@item.Description</td>
+                            <td>@item.Quantity</td>
+                            <td>@item.OutstandingQuantity</td>
+                            <td>
+                                <input 
+                                    id="receivedQuantity" 
+                                    name="receivedQuantity" 
+                                    type="number" 
+                                    class="form-control" 
+                                    min="0" max="@item.OutstandingQuantity" 
+                                    @bind-value="@item.ReceivedQuantity" />
+                                
+                            </td>
+                            <td>
+                                <input 
+                                    id="returnedQuantity"
+                                    name="returnedQuantity" 
+                                    type="number" 
+                                    class="form-control" 
+                                    min="0" max="@item.Quantity" 
+                                    @bind-value="@item.ReturnQuantity" />
+                                
+                            </td>
+                            <td>
+                                <input 
+                                    id="returnReason" 
+                                    name="returnReason" 
+                                    type="text" 
+                                    class="form-control" 
+                                    @bind-value="@item.ReturnReason" />
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+        <div class="container">
+            <div class="row">
+                <button type="button" class="col btn btn-primary mr-5" @onclick=@( () => ReceiveOrder() )>
+                    Receive Order
+                </button>
+                <button type="button" class="col btn btn-secondary mr-5" @onclick=@( () => ClearInputs() )>
+                    Clear
+                </button>
+                <button type="button" class="col btn btn-secondary mr-5" @onclick=@( () => ForceClose() )>
+                    Force Close
+                </button>
+                <input type="text" class="col form-control" @bind-value="@ForceCloseReason"/>
+            </div>
+        </div>
+        <hr>
+        <hr>
+        <h2>Unordered Items</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Item Description</th>
+                    <th scope="col">Vendor Part ID</th>
+                    <th scope="col">Quantity</th>
+                    <th scope="col">Delete</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (UnOrderedItemsModel != null && UnOrderedItemsModel.Count > 0)
+                {
+                    
+                    @foreach (var item in UnOrderedItemsModel)
+                    {
+                        <tr>
+                            <th scope="row">@item.VendorPartNumber</th>
+                            <td>@item.Description</td>
+                            <td>@item.Quantity</td>
+                            <td>
+                                <button type="button" class="btn btn-primary" @onclick=@( () => DeleteUnOrderedItem(@item) )>
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                <tr>
+                    <th scope="row">
+                        <input 
+                            id="itemDescription" 
+                            name="itemDescription" 
+                            type="text" 
+                            class="form-control" 
+                            @bind-value="@UODescription" />
+                    </th>
+                    <td>
+                        <input 
+                            id="vendorPartNumber" 
+                            name="vendorPartNumber" 
+                            type="text" 
+                            class="form-control" 
+                            @bind-value="@UOVendorPartNumber" />
+                    </td>
+                    <td>
+                        <input 
+                            id="quantity" 
+                            name="quantity" 
+                            type="number" 
+                            class="form-control" 
+                            @bind-value="@UOQuantity" />
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-primary" @onclick=@( () => AddUnOrderedItem() )>
+                            Add Item
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    }
+</div>

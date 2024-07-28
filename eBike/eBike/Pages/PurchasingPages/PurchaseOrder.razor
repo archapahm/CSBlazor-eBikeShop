@@ -1,0 +1,190 @@
+﻿@page "/PurchasingPages/PurchaseOrder"
+<PageTitle>Purchase Order</PageTitle>
+
+<div class="container h-100">
+    <h1>Purchase Order</h1>
+
+    @if (@hasFeedBack)
+    {
+        <blockquote class="text-success">@feedBackMessage</blockquote>
+    }
+
+    @if (hasError)
+    {
+        <blockquote class="text-danger">
+            @errorMessage
+            <ul>
+                @foreach (var detail in errorDetails)
+                {
+                    <li>@detail</li>
+                }
+            </ul>
+        </blockquote>
+    }
+
+    <div class="card mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="mb-3 row">
+                    <label for="vendor" class="col-sm-1 col-form-label">Vendor</label>
+                    <div class="col-sm-5">
+                        <select class="form-select" id="vendor" onchange="@DisplayVendorInfo" required>
+                            <option value="0">Choose...</option>
+                            @foreach (var vendor in vendorList)
+                            {
+                                <option value="@vendor.VendorID">@vendor.VendorName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="invalid-feedback">
+                        Please select a vendor.
+                    </div>
+                </div>
+                <div class="mb-3 row">
+                    <label for="phone" class="col-sm-1 col-form-label">Phone</label>
+                    <div class="col-sm-5">
+                        <input type="text" class="form-control" id="phone" placeholder="" @bind-value="@vendor.Phone" readonly>
+                    </div>
+                </div>
+                <div class="mb-3 row">
+                    <label for="city" class="col-sm-1 col-form-label">City</label>
+                    <div class="col-sm-5">
+                        <input type="text" class="form-control" id="city" placeholder="" @bind-value="@vendor.City" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="btn-group">
+                    @if (!HasActiveOrder)
+                    {
+                        <button class="btn btn-primary btn-lg mx-2" onclick="@Save">New Order</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-primary btn-lg mx-2" onclick="@Save">Save</button>
+                    }
+                    <button class="btn btn-success btn-lg mx-2" onclick="@PlaceOrder" disabled="@(!HasActiveOrder)">Place Order</button>
+                    <button class="btn btn-danger btn-lg mx-2" onclick="@Delete" disabled="@(!HasActiveOrder)">Delete Order</button>
+                    <button class="btn btn-secondary btn-lg mx-2" onclick="@ClearPurchaseOrder">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <p class="px-4 pt-4">
+        @if (!HasActiveOrder)
+        {
+            <span class="h2">Suggested Order</span>
+        }
+        else
+        {
+            <span class="h2">Active Order</span>
+        }
+    </p>
+        <div class="card-body px-4">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th scope="col" class="small text-muted mb-4 pb-2">Action</th>
+                        <th scope="col" class="small text-muted mb-4 pb-2">Part ID</th>
+                        <th scope="col" class="small text-muted mb-4 pb-2">Description</th>
+                        <th scope="col" class="small text-muted mb-4 pb-2 text-end">Qty on Hand</th>
+                        <th scope="col" class="small text-muted mb-4 pb-2 text-end">Reorder Level</th>
+                        <th scope="col" class="small text-muted mb-4 pb-2 text-end">Qty on Order</th>
+                        <th scope="col" class="small text-muted mb-4 pb-2 text-end">Qty to Order</th>
+                        <th scope="col" class="small text-muted mb-4 pb-2 text-end">Price</th>
+                    </tr>
+                </thead>
+                <tbody class="table-group-divider">
+                @if (purchaseOrder != null )
+                {
+                    @if (purchaseOrder.PurchaseOrderDetails != null)
+                    {
+                        @foreach (var item in purchaseOrder.PurchaseOrderDetails)
+                        {
+                            <tr>
+                                <td class="lead fw-normal mb-0">
+                                    <button class="btn btn-danger btn-md" @onclick="() => RemovePurchaseOrderDetail(item)"><i class="bi bi-trash"></i></button>
+                                    <button class="btn btn-secondary btn-md" @onclick="() => RefreshPurchaseOrderDetailInput(item)"><i class="bi bi-arrow-clockwise"></i></button>
+                                </td>
+                                <td class="lead fw-normal mb-0">@item.PartID</td>
+                                <td class="lead fw-normal mb-0">@item.Description</td>
+                                <td class="lead fw-normal mb-0 text-end">@item.QuantityOnHand</td>
+                                <td class="lead fw-normal mb-0 text-end">@item.ReorderLevel</td>
+                                <td class="lead fw-normal mb-0 text-end">@item.QuantityOnOrder</td>
+                                <td class="lead fw-normal mb-0">
+                                    @*<input type="number" class="form-control text-end" @bind="@item.QuantityToOrder" />*@
+                                        <input type="number" class="form-control text-end" onchange="@((ChangeEventArgs e)=>CalculateOnChangeQuantity(item.PartID, e.Value))" value="@item.QuantityToOrder" />
+                                </td>
+                                <td class="lead fw-normal mb-0">
+                                    @*<input type="number" class="form-control text-end" @bind="@item.PurchasePrice" step="0.01" />*@
+                                        <input type="number" class="form-control text-end" onchange="@((ChangeEventArgs e)=>CalculateOnChangePrice(item.PartID, e.Value))" value="@item.PurchasePrice" />
+                                </td>
+                            </tr>
+                        }
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-body p-4">
+            <div class="float-end">
+                <p class="mb-0 me-5 d-flex align-items-center">
+                    <span class="small text-muted me-2">Total:</span> <span class="lead fw-normal">@((purchaseOrder.SubTotal + purchaseOrder.TaxAmount).ToString("C"))</span>
+                </p>
+            </div>
+            <div class="float-end d-block">
+                <p class="mb-0 me-5 d-flex align-items-center">
+                    <span class="small text-muted me-2">GST:</span> <span class="lead fw-normal">@purchaseOrder.TaxAmount.ToString("C")</span>
+                </p>
+            </div>
+            <div class="float-end d-block">
+                <p class="mb-0 me-5 d-flex align-items-center">
+                    <span class="small text-muted me-2">Subtotal:</span> <span class="lead fw-normal">@purchaseOrder.SubTotal.ToString("C")</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <p class="px-4 pt-4"><span class="h2">Vendor Inventory</span></p>
+        <div class="card-body p-4">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th scope="col" class="small text-muted mb-4 pb-2">Action</th>
+                        <th scope="col" class="small text-muted mb-4 pb-2">Part ID</th>
+                        <th scope="col" class="small text-muted mb-4 pb-2">Description</th>
+                        <th scope="col" class="small text-muted mb-4 pb-2 text-end">Qty on Hand</th>
+                        <th scope="col" class="small text-muted mb-4 pb-2 text-end">Reorder Level</th>
+                        <th scope="col" class="small text-muted mb-4 pb-2 text-end">Qty on Order</th>
+                        <th scope="col" class="small text-muted mb-4 pb-2 text-end">Buffer</th>
+                        <th scope="col" class="small text-muted mb-4 pb-2 text-end">Price</th>
+                    </tr>
+                </thead>
+                <tbody class="table-group-divider">
+                    @foreach (var item in vendorInventoryList)
+                    {
+                        <tr>
+                            <td class="lead fw-normal mb-0">
+                                <button class="btn btn-primary btn-md" @onclick="() => AddPurchaseOrderDetail(item)"><i class="bi bi-plus-lg"></i></button>
+                            </td>
+                            <td class="lead fw-normal mb-0">@item.PartID</td>
+                            <td class="lead fw-normal mb-0">@item.Description</td>
+                            <td class="lead fw-normal mb-0 text-end">@item.QuantityOnHand</td>
+                            <td class="lead fw-normal mb-0 text-end">@item.ReorderLevel</td>
+                            <td class="lead fw-normal mb-0 text-end">@item.QuantityOnOrder</td>
+                            <td class="lead fw-normal mb-0 text-end">@item.Buffer</td>
+                            <td class="lead fw-normal mb-0 text-end">@item.PurchasePrice.ToString("F2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

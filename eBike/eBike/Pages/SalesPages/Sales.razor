@@ -1,0 +1,253 @@
+﻿@page "/SalesPages/Sales"
+@using Microsoft.AspNetCore.Components.Web
+@using System.Threading.Tasks
+<PageTitle>Sales</PageTitle>
+<h1>Sales</h1>
+
+<form>
+	<div class="container text-center">
+		<div class="row">
+			<div class="col-md-3">
+				<div class="input-group align-items-start mb-3">
+					<span class="input-group-text">Category</span>
+					<select @bind-value="CategorySelection" @bind-value:event="oninput" disabled="@isDisabled" @onchange="PopulateParts" class="form-select form-control mb-3">
+						<option value="0" disabled selected>Select a Category</option>
+						@foreach (var item in Categories)
+						{
+							<option value="@item.CategoryID">@item.Description</option>
+						}
+					</select>
+				</div>				
+			</div>
+			<div class="col-md-3">
+				<div class="input-group align-items-start mb-3">
+					<label class="input-group-text">Part</label>
+					
+						@if (!(Parts == null))
+						{
+							<select @bind-value="PartSelection" @bind-value:event="oninput" disabled="@isDisabled" @onchange="GetStock" class="form-select mb-3">
+								<option value="0" disabled selected>Select a Part</option>
+								@foreach (var item in Parts)
+								{
+									int currStock = GetStockByInt(item.PartID).Result;
+									if(currStock == 0)
+									{
+										<option value="@item.PartID" disabled>@item.Description - Out of Stock</option>
+									}
+									else
+									{
+										<option value="@item.PartID">@item.Description</option>
+									}
+								}
+							</select>
+						}
+						else
+						{
+							<select @bind="PartSelection"  class="form-select mb-3" disabled>
+								<option value="0" disabled selected>Select a Part</option>
+							</select>
+						}
+					
+				</div>				
+			</div>
+			<div class="col-md-3">
+				<div class="input-group mb-3">
+					<label class="input-group-text" id="inputGroup-sizing-default">Amount</label>
+					@if(StockQuantity == null)
+					{
+						<input class="form-control" type="number" disabled />
+					}
+					else if(StockQuantity == 0)
+					{
+						ShowPopupStock(PartSelection);
+						<input class="form-control" type="number" disabled />
+					}
+					else
+					{
+						<input class="form-control" @bind="ChosenQuantity" disabled="@isDisabled" type="number" min="1" max="@StockQuantity" oninput="if(parseInt(value)>parseInt(max)) value=max;if(parseInt(value)<1) value=1" />
+						<p class="ps-3 my-auto me-2 h-auto">Stock: @StockQuantity</p>
+					}
+				</div>
+			</div>			
+			<div class="col-md-2">
+				<button class="btn btn-primary" type="button" disabled="@isDisabled" onclick="@AddToCart">
+					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart-plus me-2" viewBox="0 0 16 16">
+						<path d="M9 5.5a.5.5 0 0 0-1 0V7H6.5a.5.5 0 0 0 0 1H8v1.5a.5.5 0 0 0 1 0V8h1.5a.5.5 0 0 0 0-1H9V5.5z" />
+						<path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1H.5zm3.915 10L3.102 4h10.796l-1.313 7h-8.17zM6 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm7 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z" />
+					</svg>Add To Cart
+				</button>
+			</div>
+		</div>
+	</div>	
+</form>
+
+<div class="container text-center table-responsive container">
+	<div class="row col-10">
+		@if(!(Cart==null))
+		{
+			if(Cart.Count != 0)
+			{
+				<table class="table table-striped-columns table-fixed align-middle">
+					<thead>
+						<tr>
+							<th scope="col" style="width:240px">Item</th>
+							<th scope="col" style="width:100px">Inventory</th>
+							<th scope="col" style="width:330px">Quantity</th>
+							<th scope="col" style="width:120px">Unit Price</th>
+							<th scope="col" style="width:120px">Total Price</th>
+						</tr>
+					</thead>
+					<tbody class="table-group-divider">
+						@foreach (var item in Cart)
+						{
+							GetTableMaxStock(item.PartID);
+							<tr>
+								<th style="width:240px">
+									@item.Description
+								</th>
+								<td>
+									@TableItemStock
+								</td>
+								<td class="d-flex justify-content-center">
+									<button class="btn btn-danger me-2" disabled="@isDisabled" @onclick="(() => RemoveFromCart(item.PartID))">
+										<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash me-2" viewBox="0 0 16 16">
+											<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z" />
+											<path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z" />
+										</svg>Remove
+									</button>
+
+									<input disabled="@isDisabled" style="max-width:80px" type="number" class="form-control" @bind="item.Quantity" min="1" max="@TableItemStock" onblur="" oninput="if(parseInt(value)>parseInt(max)) value=max; if(parseInt(value)<1) value=1" />
+									<button disabled="@isDisabled" class="btn btn-primary ms-2" type="button" @onclick="(() => UpdateCartQuantity(item.Quantity, item.PartID))">
+										<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-lg me-2" viewBox="0 0 16 16">
+											<path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z" />
+										</svg>Update
+									</button>
+								</td>
+								<td>
+									$@Math.Round(item.SellingPrice, 2)
+								</td>
+								<td>
+									$@Math.Round(item.Total, 2)
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+				<div class="row">
+					<div class="col-12 d-flex justify-content-end">
+						<button class="btn btn-danger" @onclick="() => ShowPopupClear()">Clear Cart</button>
+					</div>
+				</div>
+				<div class="row mt-3">
+					<div class="col-6 d-flex justify-content-end">
+						<div class="w-50 input-group align-items-start mb-3">
+							<span class="input-group-text">Payment Method</span>
+							<select @onchange="ChangePaymentType" disabled="@isDisabled" class="form-select form-control mb-3">
+								<option value="x" disabled selected>Select...</option>
+								<option value="M">Cash</option>
+								<option value="D">Debit</option>
+								<option value="C">Credit</option>
+							</select>
+						</div>
+					</div>
+					<div class="col-5 d-flex justify-content-end align-items-start">
+						<form class="w-75 input-group align-items-start mb-3">
+							<label class="input-group-text">Coupon Code</label>
+							<input disabled="@isDisabled" class="form-control" @bind="CouponCode" type="text"/>							
+						</form>
+					</div>
+					<div class="col-1 ">
+						<button class="btn btn-primary w-100" disabled="@isDisabled" type="button" @onclick="(()=>VerifyCoupon())">Verify</button>
+					</div>
+				</div>
+				<div class="row d-flex justify-content-end mt-1">
+					<div class="col-2 d-flex justify-content-end">
+						Subtotal:
+					</div>
+					<div class="col-2 d-flex justify-content-end">
+						$@Math.Round(Cart.Sum(x=>x.Total), 2)
+					</div>
+				</div>
+				<div class="row d-flex justify-content-end mt-2">
+					<div class="col-2 d-flex justify-content-end">
+						Tax:
+					</div>
+					<div class="col-2 d-flex justify-content-end">
+						$@Math.Round((Cart.Sum(x=>x.Total) * (decimal)0.05), 2)
+					</div>
+				</div>
+				<div class="row d-flex justify-content-end mt-2">
+					<div class="col-2 d-flex justify-content-end">
+						Discount:
+					</div>
+					<div class="col-2 d-flex justify-content-end">
+						@Discount%
+					</div>
+				</div>
+				<div class="row d-flex justify-content-end mt-2">
+					<div class="col-2 d-flex justify-content-end">
+						Total:
+					</div>
+					@if (Discount == 0)
+					{
+						<div class="col-2 d-flex justify-content-end">
+							$@Math.Round((Cart.Sum(x=>x.Total) * (decimal)1.05), 2)
+						</div>
+					}
+					else
+					{
+						<div class="col-2 d-flex justify-content-end">
+							$@Math.Round((Cart.Sum(x=>x.Total) * (1-(decimal)Discount/100) * (decimal)1.05), 2)
+						</div>
+					}					
+				</div>
+				<div class="row d-flex justify-content-end mt-2">
+					<button class="btn btn-success w-25" disabled="@isDisabled" type="button" @onclick="Checkout">Checkout</button>
+				</div>
+			}
+			else
+			{
+				<div class="row">
+					<div class="col-12 d-flex justify-content-center mt-5">
+						<h3>Your cart is empty</h3>
+					</div>
+				</div>
+			}
+		}
+		else
+		{
+			<div class="row">
+				<div class="col-12 d-flex justify-content-center mt-5">
+					<h3>Your cart is empty</h3>
+				</div>
+			</div>		
+		}
+	</div>
+</div>
+@if (showPopup)
+{
+	<div class="show darken">
+		<div class="popup d-flex flex-wrap border border-2 border-danger-subtle rounded-3">
+			<h4 class="w-100">@PopupMessage</h4>
+			<div class="d-flex w-100 justify-content-around mt-4">
+				@if(Reason == "clear")
+				{
+					<button class="btn btn-success btn-lg w-25" @onclick="() => ClearCart()">Yes</button>
+					<button class="btn btn-danger btn-lg w-25" @onclick="() => ClosePopup()">No</button>
+				}	
+				@if(Reason == "error")
+				{
+					<button class="btn btn-primary btn-lg w-25 " @onclick="() => ClosePopup()">Okay</button>
+				}
+				@if (Reason == "stock")
+				{
+					<button class="btn btn-primary btn-lg w-25 " @onclick="() => ClosePopupStock()">Okay</button>
+				}
+				@if(Reason == "success")
+				{
+					<button class="btn btn-success btn-lg w-auto " @onclick="() => ClosePopup()">Close</button>
+				}
+			</div>			
+		</div>		
+	</div>
+}

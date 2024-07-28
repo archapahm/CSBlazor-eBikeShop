@@ -1,0 +1,94 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">eBike</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" @onclick="() => expandPurchasingPages =! expandPurchasingPages">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Purchasing
+            </NavLink>
+            @if (expandPurchasingPages)
+            {
+                <NavLink class="nav-link" href="/PurchasingPages/Index">
+                    <span>Index</span>
+                </NavLink>
+                <NavLink class="nav-link" href="/PurchasingPages/PurchaseOrder">
+                    <span>Purchase Order</span>
+                </NavLink>
+            }
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" @onclick="() => expandReceivingPages =! expandReceivingPages">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Receiving
+            </NavLink>
+            @if (expandReceivingPages)
+            {
+                <NavLink class="nav-link" href="/ReceivingPages/Index">
+                    <span>Index</span>
+                </NavLink>
+                <NavLink class="nav-link" href="/ReceivingPages/Receiving">
+                    <span>Receiving</span>
+                </NavLink>
+            }
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" @onclick="() => expandSalesPages =! expandSalesPages">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Sales
+            </NavLink>
+            @if (expandSalesPages)
+            {
+                <NavLink class="nav-link" href="/SalesPages/Index">
+                    <span>Index</span>
+                </NavLink>
+                <NavLink class="nav-link" href="/SalesPages/Sales">
+                    <span>Sales</span>
+                </NavLink>
+                <NavLink class="nav-link" href="/SalesPages/SalesReturn">
+                    <span>Sales Return</span>
+                </NavLink>
+            }
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" @onclick="() => expandServicingPages =! expandServicingPages">
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Servicing
+            </NavLink>
+            @if (expandServicingPages)
+            {
+                <NavLink class="nav-link" href="/ServicingPages/Index">
+                    <span>Index</span>
+                </NavLink>
+                <NavLink class="nav-link" href="/ServicingPages/Servicing">
+                    <span>Servicing</span>
+                </NavLink>
+            }
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    // page toggle states
+    private bool expandPurchasingPages;
+    private bool expandReceivingPages;
+    private bool expandSalesPages;
+    private bool expandServicingPages;
+}

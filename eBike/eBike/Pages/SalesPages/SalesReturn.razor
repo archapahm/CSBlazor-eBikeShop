@@ -1,0 +1,168 @@
+﻿@page "/SalesPages/SalesReturn"
+<PageTitle>Sales Return</PageTitle>
+<h1>Sales Return</h1>
+
+<div class="container text-center">
+	<div class="row">
+		<div class="col-3">
+			<div class="input-group align-items-start mb-3">
+				<label class="input-group-text w-auto">Sale Invoice #</label>
+				<input class="form-control w-25" @bind="SaleID" disabled="@isDisabled" type="number" min="0" oninput="if(parseInt(value)<1) value=1" />
+			</div>
+		</div>
+		<div class="col-3 d-flex justify-content-start align-items-start">
+			<button class="btn btn-primary me-3" type="button" disabled="@isDisabled" onclick="@SearchSale">Lookup Sale</button>
+			<button class="btn btn-primary" type="button" disabled="@isClearDisabled" onclick="@ShowPopupClear">Clear</button>
+		</div>
+		@if(RefundID != null)
+		{
+			<div class="col-6 d-flex justify-content-start">
+				<h4>Refund ID: @RefundID</h4>
+			</div>
+		}
+	</div>
+	<div class="row">
+		@if(Sale != null)
+		{
+			if (Details.Count > 0)
+			{
+				<table class="table table-striped-columns table-fixed align-middle">
+					<thead>
+						<tr>
+							<th scope="col" style="width:240px">Item</th>
+							<th scope="col" style="width:100px">Org Qty</th>
+							<th scope="col" style="width:100px">Price</th>
+							<th scope="col" style="width:100px">Rtn Qty</th>
+							<th scope="col" style="width:120px">Ref</th>
+							<th scope="col" style="width:150px">Qty</th>
+							<th scope="col" style="width:400px">Reason</th>
+						</tr>
+					</thead>
+					<tbody class="table-group-divider">
+						@foreach (var item in Details)
+						{
+							<tr>
+								<th>
+									@item.Description
+								</th>
+								<td>
+									@item.OriginalQuantity
+								</td>
+								<td>
+									$@Math.Round(item.SellingPrice, 2)
+								</td>
+								<td>
+									@item.ReturnQuantity
+								</td>
+								<td>
+									<input type="checkbox" class="form-check-input" disabled="disabled" checked="@item.Refundable" />
+								</td>
+								<td>
+									@if (item.Refundable && item.ReturnQuantity < item.OriginalQuantity)
+									{
+										<input disabled="@isDisabled" type="number" class="form-control" @bind="item.Quantity" min="0" max="@(item.OriginalQuantity - item.ReturnQuantity)" oninput="if(parseInt(value)>parseInt(max)) value=max; if(parseInt(value)<0) value=0" />
+									}
+									else
+									{
+										<input disabled="disabled" type="number" class="form-control" />
+									}
+								</td>
+								<td>
+									@if (item.Refundable && item.ReturnQuantity < item.OriginalQuantity)
+									{
+										<input disabled="@isDisabled" class="form-control" type="text" @bind="item.Reason" />
+									}
+									else if (item.ReturnQuantity == item.OriginalQuantity)
+									{
+										<input disabled="disabled" value="Cannot return more" class="form-control" type="text" />
+									}
+									else
+									{
+										<input disabled="disabled" class="form-control" type="text" />
+									}
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+				<div class="container">
+					<div class="row d-flex justify-content-end mt-1">
+						<div class="col-2 d-flex justify-content-end">
+							Subtotal:
+						</div>
+						<div class="col-2 d-flex justify-content-end">
+							$@Math.Round(Details.Sum(x=>x.Quantity * x.SellingPrice), 2)
+						</div>
+					</div>
+					<div class="row d-flex justify-content-end mt-2">
+						<div class="col-2 d-flex justify-content-end">
+							Tax:
+						</div>
+						<div class="col-2 d-flex justify-content-end">
+							$@Math.Round((Details.Sum(x=>x.Quantity * x.SellingPrice) * (decimal)0.05), 2)
+						</div>
+					</div>
+					<div class="row d-flex justify-content-end mt-2">
+						<div class="col-2 d-flex justify-content-end">
+							Discount:
+						</div>
+						<div class="col-2 d-flex justify-content-end">
+							@Sale.DiscountPercent%
+						</div>
+					</div>
+					<div class="row d-flex justify-content-end mt-2">
+						<div class="col-2 d-flex justify-content-end">
+							Total:
+						</div>
+						@if (Sale.DiscountPercent != 0)
+						{
+							<div class="col-2 d-flex justify-content-end">
+								$@Math.Round((Details.Sum(x=>x.Quantity * x.SellingPrice) * (1-(decimal)Sale.DiscountPercent/100) * (decimal)1.05), 2)								
+							</div>
+						}
+						else
+						{
+							<div class="col-2 d-flex justify-content-end">
+								$@Math.Round((Details.Sum(x=>x.Quantity * x.SellingPrice) * (decimal)1.05), 2)
+							</div>
+						}
+					</div>
+					<div class="row d-flex justify-content-end mt-2">
+						<div class="w-75 d-flex justify-content-end">
+							<button class="btn btn-success w-25" type="button" disabled="@isDisabled" onclick="@ProcessRefund">Refund</button>
+						</div>						
+					</div>
+				</div>
+			}
+			else
+			{
+				Sale = null;
+				Details = null;
+				ShowPopupError("No items in sale");
+			}		
+		}
+	</div>
+</div>
+@if (showPopup)
+{
+	<div class="show darken">
+		<div class="popup d-flex flex-wrap border border-2 border-danger-subtle rounded-3">
+			<h4 class="w-100">@PopupMessage</h4>
+			<div class="d-flex w-100 justify-content-around mt-4">
+				@if (Reason == "clear")
+				{
+					<button class="btn btn-success btn-lg w-25" @onclick="() => ClearSale()">Yes</button>
+					<button class="btn btn-danger btn-lg w-25" @onclick="() => ClosePopup()">No</button>
+				}
+				@if (Reason == "error")
+				{
+					<button class="btn btn-primary btn-lg w-25 " @onclick="() => ClosePopup()">Okay</button>
+				}
+				@if (Reason == "success")
+				{
+					<button class="btn btn-success btn-lg w-auto " @onclick="() => ClosePopup()">Close</button>
+				}
+			</div>
+		</div>
+	</div>
+}
